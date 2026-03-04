@@ -1,0 +1,21 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcdebugger/
+*.xcbkptlist
+
+# Build
+build/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+
+# macOS
+.DS_Store
+
+# 大きな音声ファイル（必要に応じて）
+mp3s/
