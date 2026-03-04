@@ -647,7 +647,7 @@ struct ContentView: View {
         words
             .components(separatedBy: .whitespaces)
             .filter { !$0.isEmpty }
-            .map { String(repeating: "_", count: $0.count + 1) }
+            .map { String(repeating: "_", count: min($0.count + 1, 8)) }
             .joined(separator: " ")
     }
 
