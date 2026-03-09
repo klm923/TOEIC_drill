@@ -24,7 +24,7 @@ private extension EnvironmentValues {
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.previewTestMode) private var previewTestMode
-    /// 1. correctCount 昇順、2. 同値はランダム、3. 過去10問は除外
+    /// 1. correctCount 昇順、2. 同値はランダム、3. 過去N問は除外（Nは設定で10〜50）
     @Query(sort: \Phrase.correctCount, order: .forward) private var phrases: [Phrase]
     @Query(sort: \DailyStats.dayStart, order: .reverse) private var allDailyStats: [DailyStats]
 
@@ -51,13 +51,16 @@ struct ContentView: View {
     @State private var statsImportResultMessage = ""
     /// 日別統計グラフシート
     @State private var showDailyStatsGraph = false
+    /// 設定シート
+    @State private var showSettingsSheet = false
 
     /// 現在表示中のフレーズ
     @State private var currentPhrase: Phrase?
     /// 左スワイプ（前へ）用の履歴
     @State private var phraseHistory: [Phrase] = []
-    /// 過去10問のフレーズID（抽出時に除外する）
+    /// 過去N問のフレーズID（抽出時に除外する）。件数は設定で 10〜50
     @State private var recentlyShownIds: [PersistentIdentifier] = []
+    @AppStorage("recentlyShownIdsMax") private var recentlyShownIdsMax: Int = 10
     @State private var isAnswerRevealed: Bool = false
     /// キーボード表示中は true（フレーズ Group を非表示にして検索フィールドを確保）
     @State private var isKeyboardVisible = false
@@ -98,7 +101,7 @@ struct ContentView: View {
 
         for count in sortedCounts {
             guard let phrasesInGroup = grouped[count] else { continue }
-            // 過去10問を除外
+            // 過去N問を除外（Nは設定で10〜50）
             let candidates = phrasesInGroup.filter { phrase in
                 !recentlyShownIds.contains(phrase.persistentModelID)
             }
@@ -106,7 +109,7 @@ struct ContentView: View {
                 return picked
             }
         }
-        // 全件が過去10問に含まれる場合は、その中からランダム（フォールバック）
+        // 全件が過去N問に含まれる場合は、その中からランダム（フォールバック）
         return filtered.randomElement()
     }
 
@@ -127,6 +130,12 @@ struct ContentView: View {
             .onChange(of: currentPhrase?.persistentModelID) { _, _ in
                 isAnswerRevealed = false
                 currentTestMode = Bool.random() ? .englishWord : .japanese
+            }
+            .onChange(of: recentlyShownIdsMax) { _, newMax in
+                let max = max(10, min(50, newMax))
+                if recentlyShownIds.count > max {
+                    recentlyShownIds = Array(recentlyShownIds.suffix(max))
+                }
             }
             .onChange(of: searchText) { _, _ in
                 phraseHistory = []
@@ -219,6 +228,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showDailyStatsGraph) {
                 DailyStatsGraphView(stats: allDailyStats)
+            }
+            .sheet(isPresented: $showSettingsSheet) {
+                SettingsView(isPresented: $showSettingsSheet)
             }
             .alert("登録しました", isPresented: $showNewPhraseResultAlert) {
                 Button("OK", role: .cancel) {
@@ -340,6 +352,12 @@ struct ContentView: View {
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("統計インポート")
+                Button(action: { showSettingsSheet = true }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 16))
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("設定")
             }
         }
         .padding(.horizontal, 12)
@@ -537,10 +555,11 @@ struct ContentView: View {
     }
 
     // MARK: - フレーズ移動
-    /// 過去10問に追加（最大10件保持）
+    /// 過去N問に追加（最大件数は設定で 10〜50）
     private func addToRecentlyShown(_ phrase: Phrase) {
+        let max = max(10, min(50, recentlyShownIdsMax))
         recentlyShownIds.append(phrase.persistentModelID)
-        if recentlyShownIds.count > 10 {
+        if recentlyShownIds.count > max {
             recentlyShownIds.removeFirst()
         }
     }

@@ -140,8 +140,11 @@ struct PhraseEditSheetView: View {
                 return
             }
             let nextIndex = nextAvailableIndexForNewPhrase()
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyyMMdd"
+            let sourceFile = formatter.string(from: Date())
             let newPhrase = Phrase(
-                sourceFile: "DUMMY",
+                sourceFile: sourceFile,
                 level: "level_999",
                 index: nextIndex,
                 word: word,
