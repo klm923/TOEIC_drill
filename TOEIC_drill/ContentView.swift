@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import Combine
 import UniformTypeIdentifiers
 import UIKit
 
@@ -56,8 +57,8 @@ struct ContentView: View {
 
     /// 現在表示中のフレーズ
     @State private var currentPhrase: Phrase?
-    /// 左スワイプ（前へ）用の履歴
-    @State private var phraseHistory: [Phrase] = []
+    /// 左スワイプ（前へ）用の履歴（参照型で保持し、シート表示時もリセットされないようにする）
+    @StateObject private var phraseHistoryHolder = PhraseHistoryHolder()
     /// 過去N問のフレーズID（抽出時に除外する）。件数は設定で 10〜50
     @State private var recentlyShownIds: [PersistentIdentifier] = []
     @AppStorage("recentlyShownIdsMax") private var recentlyShownIdsMax: Int = 10
@@ -138,7 +139,7 @@ struct ContentView: View {
                 }
             }
             .onChange(of: searchText) { _, _ in
-                phraseHistory = []
+                // phraseHistory は保持（フィルター変更後も左スワイプで前のフレーズに戻れるようにする）
                 recentlyShownIds = []
                 if let next = selectNextPhrase() {
                     currentPhrase = next
@@ -567,13 +568,13 @@ struct ContentView: View {
     private func goToNext() {
         guard let current = currentPhrase else { return }
         guard let next = selectNextPhrase() else { return }
-        phraseHistory.append(current)
+        phraseHistoryHolder.items.append(current)
         addToRecentlyShown(next)
         currentPhrase = next
     }
 
     private func goToPrevious() {
-        if let prev = phraseHistory.popLast() {
+        if let prev = phraseHistoryHolder.items.popLast() {
             currentPhrase = prev
         }
     }
@@ -765,6 +766,11 @@ private enum PendingImportKind {
 private enum TestMode {
     case englishWord  // 英単語・英語フレーズの[]内をマスキング
     case japanese      // 日本語フレーズを "？？？" でマスキング
+}
+
+/// 左スワイプ用の履歴を保持するクラス。シート表示などでビューが再生成されてもリセットされないよう参照型で保持。
+private final class PhraseHistoryHolder: ObservableObject {
+    @Published var items: [Phrase] = []
 }
 
 #Preview {
