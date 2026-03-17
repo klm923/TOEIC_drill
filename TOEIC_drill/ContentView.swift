@@ -61,6 +61,8 @@ struct ContentView: View {
     @StateObject private var phraseHistoryHolder = PhraseHistoryHolder()
     /// 過去N問のフレーズID（抽出時に除外する）。件数は設定で 10〜50
     @State private var recentlyShownIds: [PersistentIdentifier] = []
+    /// フィルタ適用前に退避した recentlyShownIds（searchText が空に戻ったときに復元）
+    @State private var recentlyShownIdsBackup: [PersistentIdentifier] = []
     @AppStorage("recentlyShownIdsMax") private var recentlyShownIdsMax: Int = 10
     @State private var isAnswerRevealed: Bool = false
     /// キーボード表示中は true（フレーズ Group を非表示にして検索フィールドを確保）
@@ -138,9 +140,22 @@ struct ContentView: View {
                     recentlyShownIds = Array(recentlyShownIds.suffix(max))
                 }
             }
-            .onChange(of: searchText) { _, _ in
+            .onChange(of: searchText) { oldValue, newValue in
                 // phraseHistory は保持（フィルター変更後も左スワイプで前のフレーズに戻れるようにする）
-                recentlyShownIds = []
+                if newValue.isEmpty {
+                    // フィルタ解除時: 退避していた履歴を復元
+                    recentlyShownIds = recentlyShownIdsBackup
+                    let max = max(10, min(50, recentlyShownIdsMax))
+                    if recentlyShownIds.count > max {
+                        recentlyShownIds = Array(recentlyShownIds.suffix(max))
+                    }
+                } else {
+                    // フィルタ適用時: 現在の履歴を退避してからリセット
+                    if oldValue.isEmpty {
+                        recentlyShownIdsBackup = recentlyShownIds
+                    }
+                    recentlyShownIds = []
+                }
                 if let next = selectNextPhrase() {
                     currentPhrase = next
                     addToRecentlyShown(next)

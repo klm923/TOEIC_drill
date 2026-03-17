@@ -9,6 +9,10 @@
   2. 同値内はランダム。
   3. 直近10問（recentlyShownIds）に含まれる ID は除外。
   4. 候補が残らなければ、全件からランダムで1件（フォールバック）。
+- **検索フィルタと recentlyShownIds**:
+  - フィルタ適用時（searchText が空→非空）: `recentlyShownIdsBackup` に現在の recentlyShownIds を退避し、recentlyShownIds をリセット。
+  - フィルタ解除時（searchText が非空→空）: 退避していた recentlyShownIds を復元。復元後、recentlyShownIdsMax を超える分は末尾でトリム。
+  - 検索語の変更のみ（A→B）: 退避は更新せず、recentlyShownIds のみリセット。
 
 ## テストモード・マスキング
 
